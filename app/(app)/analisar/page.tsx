@@ -42,8 +42,23 @@ export default function AnalisarPage() {
   async function handleAnalyze(processoId: string) {
     setAnalyzingId(processoId)
     try {
+      // Tenta obter sessão; fallback para getUser se necessário
+      let token = ""
       const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token || ""
+      if (session?.access_token) {
+        token = session.access_token
+      } else {
+        // Força refresh da sessão
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession()
+        token = refreshed?.access_token || ""
+      }
+
+      if (!token) {
+        alert("Sessão expirada. Por favor faça login novamente.")
+        window.location.href = "/auth/login"
+        return
+      }
+
       const resp = await fetch("/api/analisar", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },

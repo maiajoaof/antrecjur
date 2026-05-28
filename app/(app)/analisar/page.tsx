@@ -42,9 +42,11 @@ export default function AnalisarPage() {
   async function handleAnalyze(processoId: string) {
     setAnalyzingId(processoId)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token || ""
       const resp = await fetch("/api/analisar", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ processoId }),
       })
       if (!resp.ok) {

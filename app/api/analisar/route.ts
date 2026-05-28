@@ -3,33 +3,45 @@ import { createClient } from "@supabase/supabase-js"
 import { analyzePdfBuffer } from "@/lib/analyzer"
 
 export async function POST(req: NextRequest) {
-  // Valida sessão via Authorization header enviado pelo cliente
   const authHeader = req.headers.get("authorization")
-  const token = authHeader?.replace("Bearer ", "")
+  const token = authHeader?.replace("Bearer ", "").trim()
 
-  const supabase = createClient(
+  if (!token) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+  }
+
+  // Usa anon key + token do usuário para verificar sessão
+  const supabaseUser = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    }
+  )
+
+  const { data: { user }, error: authError } = await supabaseUser.auth.getUser()
+
+  if (authError || !user) {
+    console.error("Auth error:", authError?.message)
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+  }
+
+  // Admin client para operações no banco
+  const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  // Verifica o token do usuário
-  const { data: { user }, error: authError } = token
-    ? await supabase.auth.getUser(token)
-    : { data: { user: null }, error: null }
-
-  if (!user) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
-
   const { processoId } = await req.json()
   if (!processoId) return NextResponse.json({ error: "processoId obrigatório" }, { status: 400 })
 
-  const { data: processo } = await supabase.from("processos").select("*").eq("id", processoId).single()
+  const { data: processo } = await supabaseAdmin.from("processos").select("*").eq("id", processoId).single()
   if (!processo) return NextResponse.json({ error: "Processo não encontrado" }, { status: 404 })
   if (!processo.pdf_url) return NextResponse.json({ error: "Processo sem PDF" }, { status: 400 })
 
-  await supabase.from("processos").update({ status: "processando" }).eq("id", processoId)
+  await supabaseAdmin.from("processos").update({ status: "processando" }).eq("id", processoId)
 
   try {
     const pdfResp = await fetch(processo.pdf_url)
@@ -38,14 +50,14 @@ export async function POST(req: NextRequest) {
 
     const extracted = await analyzePdfBuffer(pdfBuffer)
 
-    await supabase.from("processos").update({
+    await supabaseAdmin.from("processos").update({
       status: "analisado",
       ...extracted,
       erro_msg: null,
     }).eq("id", processoId)
 
     const dadosLog: Record<string, unknown> = extracted as unknown as Record<string, unknown>
-    await supabase.from("audit_log").insert({
+    await supabaseAdmin.from("audit_log").insert({
       user_id: user.id, acao: "analisar", tabela: "processos",
       registro_id: processoId, dados: dadosLog
     })
@@ -53,7 +65,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, data: extracted })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Erro desconhecido"
-    await supabase.from("processos").update({ status: "erro", erro_msg: msg }).eq("id", processoId)
+    await supabaseAdmin.from("processos").update({ status: "erro", erro_msg: msg }).eq("id", processoId)
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

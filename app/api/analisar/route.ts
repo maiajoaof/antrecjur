@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminSupabase } from "@/lib/supabase-server"
+import { createClient } from "@supabase/supabase-js"
 import { analyzePdfBuffer } from "@/lib/analyzer"
 
 export async function POST(req: NextRequest) {
-  const supabase = createAdminSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+  // Valida sessão via Authorization header enviado pelo cliente
+  const authHeader = req.headers.get("authorization")
+  const token = authHeader?.replace("Bearer ", "")
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+
+  // Verifica o token do usuário
+  const { data: { user }, error: authError } = token
+    ? await supabase.auth.getUser(token)
+    : { data: { user: null }, error: null }
+
+  if (!user) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+  }
 
   const { processoId } = await req.json()
   if (!processoId) return NextResponse.json({ error: "processoId obrigatório" }, { status: 400 })
@@ -14,26 +29,21 @@ export async function POST(req: NextRequest) {
   if (!processo) return NextResponse.json({ error: "Processo não encontrado" }, { status: 404 })
   if (!processo.pdf_url) return NextResponse.json({ error: "Processo sem PDF" }, { status: 400 })
 
-  // Marca como processando
   await supabase.from("processos").update({ status: "processando" }).eq("id", processoId)
 
   try {
-    // Baixa o PDF
     const pdfResp = await fetch(processo.pdf_url)
     if (!pdfResp.ok) throw new Error("Não foi possível baixar o PDF")
     const pdfBuffer = Buffer.from(await pdfResp.arrayBuffer())
 
-    // Analisa com Claude
     const extracted = await analyzePdfBuffer(pdfBuffer)
 
-    // Salva resultado
     await supabase.from("processos").update({
       status: "analisado",
       ...extracted,
       erro_msg: null,
     }).eq("id", processoId)
 
-    // Audit log — cast seguro via unknown
     const dadosLog: Record<string, unknown> = extracted as unknown as Record<string, unknown>
     await supabase.from("audit_log").insert({
       user_id: user.id, acao: "analisar", tabela: "processos",

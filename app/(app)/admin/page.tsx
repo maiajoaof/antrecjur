@@ -33,9 +33,11 @@ export default function AdminPage() {
   async function createUser() {
     if (!newUser.email || !newUser.nome || !newUser.password) return
     setCreatingUser(true); setUserMsg("")
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token || ""
     const resp = await fetch("/api/admin/users", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
       body: JSON.stringify(newUser),
     })
     const data = await resp.json()

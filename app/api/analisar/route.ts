@@ -34,11 +34,15 @@ export async function POST(req: NextRequest) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  const { processoId } = await req.json()
+  const body = await req.json()
+  const { processoId } = body
+  console.log("processoId recebido:", processoId)
+
   if (!processoId) return NextResponse.json({ error: "processoId obrigatório" }, { status: 400 })
 
-  const { data: processo } = await supabaseAdmin.from("processos").select("*").eq("id", processoId).single()
-  if (!processo) return NextResponse.json({ error: "Processo não encontrado" }, { status: 404 })
+  const { data: processo, error: procError } = await supabaseAdmin.from("processos").select("*").eq("id", processoId).single()
+  console.log("processo encontrado:", processo?.id, "erro:", procError?.message)
+  if (!processo) return NextResponse.json({ error: `Processo não encontrado (id: ${processoId})` }, { status: 404 })
   if (!processo.pdf_url) return NextResponse.json({ error: "Processo sem PDF" }, { status: 400 })
 
   await supabaseAdmin.from("processos").update({ status: "processando" }).eq("id", processoId)

@@ -152,8 +152,9 @@ export default function AnalisarPage() {
                 <th className="table-th">Reclamada</th>
                 <th className="table-th">Valor condenação</th>
                 <th className="table-th">Recurso</th>
-                <th className="table-th">Cadastrado em</th>
-                <th className="table-th">Ações</th>
+                  <th className="table-th">Advogados (reclamada)</th>
+                  <th className="table-th">Cadastrado em</th>
+                  <th className="table-th">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">

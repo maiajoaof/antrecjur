@@ -1,7 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk"
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
 const SECTION_PATTERNS = [
   /^SENTENÇA/i, /^ACÓRDÃO/i, /^ACORDAM/i,
   /Vistos,\s+relatados\s+e\s+discutidos/i,
@@ -38,9 +36,15 @@ function extractRelevantSections(text: string): string {
   return combined
 }
 
+export interface Advogado {
+  nome: string
+  oab: string
+}
+
 export interface ExtractedData {
   reclamante: string | null
   reclamada: string | null
+  advogados_reclamada: Advogado[]
   houve_sentenca: boolean | null
   houve_condenacao: boolean | null
   descricao_condenacao: string | null
@@ -92,6 +96,10 @@ O JSON deve ter exatamente estas chaves:
 }
 Se não estiver claro, use Não identificado. Responda SOMENTE o JSON.`
 
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada")
+  const client = new Anthropic({ apiKey })
+
   const response = await client.messages.create({
     model: "claude-sonnet-4-5",
     max_tokens: 1000,
@@ -107,9 +115,22 @@ Se não estiver claro, use Não identificado. Responda SOMENTE o JSON.`
   if (!parsed) { const m = raw.match(/\{[\s\S]*\}/); if (m) try { parsed = JSON.parse(m[0]) } catch {} }
   if (!parsed) throw new Error("Resposta da IA em formato inválido")
 
+  // Normaliza array de advogados
+  let advogados: { nome: string; oab: string }[] = []
+  if (Array.isArray(parsed.advogados_reclamada)) {
+    advogados = parsed.advogados_reclamada
+      .filter((a: unknown) => a && typeof a === "object")
+      .map((a: unknown) => {
+        const adv = a as Record<string, string>
+        return { nome: adv.nome || "", oab: adv.oab || "" }
+      })
+      .filter(a => a.nome)
+  }
+
   return {
     reclamante: parsed.reclamante || null,
     reclamada: parsed.reclamada || null,
+    advogados_reclamada: advogados,
     houve_sentenca: parseBool(parsed.houve_sentenca),
     houve_condenacao: parseBool(parsed.houve_condenacao),
     descricao_condenacao: parsed.descricao_condenacao || null,

@@ -28,6 +28,7 @@ export interface Processo {
   reclamante: string | null
   reclamada: string | null
   advogados_reclamada: Advogado[] | null
+  advogados_reclamante: Advogado[] | null
   houve_sentenca: boolean | null
   houve_condenacao: boolean | null
   descricao_condenacao: string | null

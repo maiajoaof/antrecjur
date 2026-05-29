@@ -177,6 +177,26 @@ export default function AcompanharPage() {
                   </div>
                 </div>
 
+                {/* Advogados da reclamada */}
+                {(() => {
+                  const proc = (selected as unknown as Record<string, Record<string, unknown>>).processo
+                  const advs = proc?.advogados_reclamada as {nome:string;oab:string}[] | null
+                  if (!advs || advs.length === 0) return null
+                  return (
+                    <div className="mb-4">
+                      <p className="text-xs font-medium text-slate-500 mb-2">⚖️ Advogados da reclamada</p>
+                      <div className="space-y-2">
+                        {advs.map((a, i) => (
+                          <div key={i} className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                            <p className="text-sm font-medium text-slate-800">{a.nome}</p>
+                            {a.oab && <p className="text-xs text-slate-500 mt-0.5">{a.oab}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 {/* Stage */}
                 <div className="mb-4">
                   <p className="text-xs font-medium text-slate-500 mb-2">Stage</p>

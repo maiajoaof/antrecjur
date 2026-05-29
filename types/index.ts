@@ -15,6 +15,11 @@ export type AcompanhamentoStage =
 
 export type CanalContato = "email" | "whatsapp" | "telefone"
 
+export interface Advogado {
+  nome: string
+  oab: string
+}
+
 export interface Processo {
   id: string
   numero: string
@@ -22,6 +27,7 @@ export interface Processo {
   status: ProcessoStatus
   reclamante: string | null
   reclamada: string | null
+  advogados_reclamada: Advogado[] | null
   houve_sentenca: boolean | null
   houve_condenacao: boolean | null
   descricao_condenacao: string | null

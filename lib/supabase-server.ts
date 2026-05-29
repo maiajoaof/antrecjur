@@ -7,9 +7,13 @@ function makeClient(url: string, key: string) {
     cookies: {
       getAll() { return cookieStore.getAll() },
       setAll(cs: { name: string; value: string; options?: Record<string, unknown> }[]) {
-        cs.forEach(({ name, value, options }) =>
-          cookieStore.set(name, value, options as Parameters<typeof cookieStore.set>[2])
-        )
+        try {
+          cs.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options as Parameters<typeof cookieStore.set>[2])
+          )
+        } catch {
+          // Ignorado em Server Components — apenas Route Handlers podem setar cookies
+        }
       },
     },
   })

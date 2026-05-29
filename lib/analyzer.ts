@@ -17,6 +17,10 @@ const MAX_CHARS = 90000
 
 function extractRelevantSections(text: string): string {
   if (text.length <= MAX_CHARS) return text
+
+  // Sempre inclui o início do documento (capa, partes, advogados)
+  const header = text.slice(0, 6000)
+
   const lines = text.split("\n")
   const sections: string[] = []
   let i = 0
@@ -28,11 +32,13 @@ function extractRelevantSections(text: string): string {
       i = end
     } else { i++ }
   }
+
   if (sections.length === 0 || sections.join("").length < 3000) {
     return (text.slice(0, 40000) + "\n\n[...]\n\n" + text.slice(-40000)).slice(0, MAX_CHARS)
   }
-  let combined = sections.join("\n\n---\n\n")
-  if (combined.length > MAX_CHARS) combined = combined.slice(-MAX_CHARS)
+
+  let combined = header + "\n\n---\n\n" + sections.join("\n\n---\n\n")
+  if (combined.length > MAX_CHARS) combined = combined.slice(0, MAX_CHARS)
   return combined
 }
 

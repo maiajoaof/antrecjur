@@ -177,6 +177,25 @@ export default function AcompanharPage() {
                   </div>
                 </div>
 
+                {/* Advogados do reclamante */}
+                {(() => {
+                  const advs = ((selected as unknown as Record<string, unknown>).processo as Record<string, unknown>)?.advogados_reclamante as {nome:string;oab:string}[] | undefined
+                  if (!advs || !Array.isArray(advs) || advs.length === 0) return null
+                  return (
+                    <div className="mb-4">
+                      <p className="text-xs font-medium text-slate-500 mb-2">👤 Advogados do reclamante</p>
+                      <div className="space-y-2">
+                        {advs.map((a, i) => (
+                          <div key={i} className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                            <p className="text-sm font-medium text-slate-800">{a.nome}</p>
+                            {a.oab && <p className="text-xs text-slate-500 mt-0.5">{a.oab}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 {/* Advogados da reclamada */}
                 {(() => {
                   const advs = ((selected as unknown as Record<string, unknown>).processo as Record<string, unknown>)?.advogados_reclamada as {nome:string;oab:string}[] | undefined

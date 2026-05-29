@@ -152,6 +152,7 @@ export default function AnalisarPage() {
                 <th className="table-th">Reclamada</th>
                 <th className="table-th">Valor condenação</th>
                 <th className="table-th">Recurso</th>
+                    <th className="table-th">Advogados (reclamante)</th>
                   <th className="table-th">Advogados (reclamada)</th>
                   <th className="table-th">Cadastrado em</th>
                   <th className="table-th">Ações</th>
@@ -159,7 +160,7 @@ export default function AnalisarPage() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {processos.length === 0 ? (
-                <tr><td colSpan={10} className="table-td text-center text-slate-400 py-8">Nenhum processo encontrado.</td></tr>
+                <tr><td colSpan={11} className="table-td text-center text-slate-400 py-8">Nenhum processo encontrado.</td></tr>
               ) : processos.map((p) => (
                 <tr key={p.id} className={`hover:bg-slate-50 transition-colors ${selected.has(p.id) ? "bg-red-50" : ""}`}>
                   <td className="table-td">
@@ -172,6 +173,18 @@ export default function AnalisarPage() {
                   <td className="table-td text-xs font-mono">{formatCurrency(p.valor_condenacao)}</td>
                   <td className="table-td text-xs">
                     {p.houve_recurso === null ? "—" : p.houve_recurso ? <span className="text-amber-600">Sim</span> : <span className="text-green-600">Não</span>}
+                  </td>
+                  <td className="table-td text-xs">
+                    {p.advogados_reclamante && p.advogados_reclamante.length > 0
+                      ? <div className="space-y-1">
+                          {p.advogados_reclamante.map((a, i) => (
+                            <div key={i}>
+                              <span className="font-medium text-slate-700">{a.nome}</span>
+                              {a.oab && <span className="text-slate-400 ml-1">({a.oab})</span>}
+                            </div>
+                          ))}
+                        </div>
+                      : <span className="text-slate-400">—</span>}
                   </td>
                   <td className="table-td text-xs">
                     {p.advogados_reclamada && p.advogados_reclamada.length > 0

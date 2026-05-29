@@ -51,7 +51,13 @@ export async function POST(req: NextRequest) {
     const pdfBuffer = Buffer.from(await pdfResp.arrayBuffer())
     const extracted = await analyzePdfBuffer(pdfBuffer)
 
-    await db.from("processos").update({ status: "analisado", ...extracted, erro_msg: null }).eq("id", processoId)
+    const { advogados_reclamada, ...processFields } = extracted
+    await db.from("processos").update({
+      status: "analisado",
+      ...processFields,
+      advogados_reclamada: advogados_reclamada as unknown as Record<string, unknown>[],
+      erro_msg: null,
+    }).eq("id", processoId)
     await db.from("audit_log").insert({
       user_id: user.id, acao: "analisar", tabela: "processos",
       registro_id: processoId, dados: extracted as unknown as Record<string, unknown>

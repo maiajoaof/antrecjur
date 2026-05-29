@@ -179,9 +179,13 @@ export default function AcompanharPage() {
 
                 {/* Advogados da reclamada */}
                 {(() => {
-                  const proc = (selected as unknown as Record<string, Record<string, unknown>>).processo
-                  const advs = proc?.advogados_reclamada as {nome:string;oab:string}[] | null
-                  if (!advs || advs.length === 0) return null
+                  const advs = ((selected as unknown as Record<string, unknown>).processo as Record<string, unknown>)?.advogados_reclamada as {nome:string;oab:string}[] | undefined
+                  if (!advs || !Array.isArray(advs) || advs.length === 0) return (
+                    <div className="mb-4">
+                      <p className="text-xs font-medium text-slate-500 mb-2">⚖️ Advogados da reclamada</p>
+                      <p className="text-xs text-slate-400 italic">Nenhum advogado identificado — re-analise o processo para extrair.</p>
+                    </div>
+                  )
                   return (
                     <div className="mb-4">
                       <p className="text-xs font-medium text-slate-500 mb-2">⚖️ Advogados da reclamada</p>

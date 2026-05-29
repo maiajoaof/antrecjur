@@ -21,6 +21,9 @@ function extractRelevantSections(text: string): string {
   // Sempre inclui o início do documento (capa, partes, advogados)
   const header = text.slice(0, 6000)
 
+  // Extrai seções com OAB (onde ficam os dados dos advogados)
+  const oabSections = extractOabSections(text)
+
   const lines = text.split("\n")
   const sections: string[] = []
   let i = 0
@@ -37,9 +40,23 @@ function extractRelevantSections(text: string): string {
     return (text.slice(0, 40000) + "\n\n[...]\n\n" + text.slice(-40000)).slice(0, MAX_CHARS)
   }
 
-  let combined = header + "\n\n---\n\n" + sections.join("\n\n---\n\n")
+  let combined = header + "\n\n---\n\n" + oabSections + "\n\n---\n\n" + sections.join("\n\n---\n\n")
   if (combined.length > MAX_CHARS) combined = combined.slice(0, MAX_CHARS)
   return combined
+}
+
+// Extrai seções com OAB para garantir captura dos advogados
+function extractOabSections(text: string): string {
+  const lines = text.split("\n")
+  const sections: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    if (/OAB\/[A-Z]{2}[\s\/]?\d+/i.test(lines[i])) {
+      const start = Math.max(0, i - 3)
+      const end = Math.min(lines.length, i + 3)
+      sections.push(lines.slice(start, end).join("\n"))
+    }
+  }
+  return sections.join("\n---\n")
 }
 
 export interface Advogado {
@@ -91,6 +108,7 @@ O JSON deve ter exatamente estas chaves:
 {
   "reclamante": "Nome completo do reclamante/autor",
   "reclamada": "Nome completo da reclamada/réu",
+  "advogados_reclamada": [{"nome": "Nome do advogado", "oab": "OAB/UF 000000"}],
   "houve_sentenca": "Sim" ou "Não",
   "houve_condenacao": "Sim" ou "Não",
   "descricao_condenacao": "Natureza da condenação ou Não aplicável",
@@ -100,6 +118,7 @@ O JSON deve ter exatamente estas chaves:
   "resultado_recurso": "Descrição do resultado ou Não aplicável",
   "valor_acordao": "Valor em reais ou Não aplicável"
 }
+Para advogados_reclamada: extraia APENAS os advogados que representam a parte RECLAMADA/RÉ (empresa ou pessoa processada). NÃO inclua advogados do reclamante/autor. O advogado da reclamada geralmente assina a contestação ou peças em nome da empresa ré. Se não encontrar nenhum, retorne array vazio []. Inclua nome completo e OAB com estado (ex: OAB/SP 123456).
 Se não estiver claro, use Não identificado. Responda SOMENTE o JSON.`
 
   const apiKey = process.env.ANTHROPIC_API_KEY

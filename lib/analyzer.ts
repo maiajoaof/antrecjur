@@ -68,6 +68,7 @@ export interface ExtractedData {
   reclamante: string | null
   reclamada: string | null
   advogados_reclamada: Advogado[]
+  advogados_reclamante: Advogado[]
   houve_sentenca: boolean | null
   houve_condenacao: boolean | null
   descricao_condenacao: string | null
@@ -109,6 +110,7 @@ O JSON deve ter exatamente estas chaves:
   "reclamante": "Nome completo do reclamante/autor",
   "reclamada": "Nome completo da reclamada/réu",
   "advogados_reclamada": [{"nome": "Nome do advogado", "oab": "OAB/UF 000000"}],
+  "advogados_reclamante": [{"nome": "Nome do advogado", "oab": "OAB/UF 000000"}],
   "houve_sentenca": "Sim" ou "Não",
   "houve_condenacao": "Sim" ou "Não",
   "descricao_condenacao": "Natureza da condenação ou Não aplicável",
@@ -118,6 +120,7 @@ O JSON deve ter exatamente estas chaves:
   "resultado_recurso": "Descrição do resultado ou Não aplicável",
   "valor_acordao": "Valor em reais ou Não aplicável"
 }
+Para advogados_reclamante: extraia APENAS os advogados que representam a parte RECLAMANTE/AUTOR. O advogado do reclamante geralmente assina a petição inicial. Se não encontrar nenhum, retorne array vazio []. Inclua nome completo e OAB com estado.
 Para advogados_reclamada: extraia APENAS os advogados que representam a parte RECLAMADA/RÉ (empresa ou pessoa processada). NÃO inclua advogados do reclamante/autor. O advogado da reclamada geralmente assina a contestação ou peças em nome da empresa ré. Se não encontrar nenhum, retorne array vazio []. Inclua nome completo e OAB com estado (ex: OAB/SP 123456).
 Se não estiver claro, use Não identificado. Responda SOMENTE o JSON.`
 
@@ -152,10 +155,23 @@ Se não estiver claro, use Não identificado. Responda SOMENTE o JSON.`
       .filter(a => a.nome)
   }
 
+  // Normaliza advogados do reclamante
+  let advogadosReclamante: { nome: string; oab: string }[] = []
+  if (Array.isArray(parsed.advogados_reclamante)) {
+    advogadosReclamante = parsed.advogados_reclamante
+      .filter((a: unknown) => a && typeof a === "object")
+      .map((a: unknown) => {
+        const adv = a as Record<string, string>
+        return { nome: adv.nome || "", oab: adv.oab || "" }
+      })
+      .filter(a => a.nome)
+  }
+
   return {
     reclamante: parsed.reclamante || null,
     reclamada: parsed.reclamada || null,
     advogados_reclamada: advogados,
+    advogados_reclamante: advogadosReclamante,
     houve_sentenca: parseBool(parsed.houve_sentenca),
     houve_condenacao: parseBool(parsed.houve_condenacao),
     descricao_condenacao: parsed.descricao_condenacao || null,
